@@ -3,7 +3,8 @@
  * v2 keys hold the spec data model (integer paise, shop_id, consent dates).
  * Data saved by the earlier v1 prototype (rupee amounts) is migrated once on first load.
  */
-import type { Customer, Product, ReminderLog, ShelfScan, ShopProfile, Transaction } from '../types';
+import type { Customer, Lead, MessageTemplate, Product, ReminderLog, ScheduledMessage, ShelfScan, ShopProfile, Transaction } from '../types';
+import { defaultTemplates } from './crm.js';
 import { rupeesToPaise } from './money.js';
 import { sanitizeDetections } from './shelf.js';
 
@@ -15,6 +16,10 @@ export const KEYS = {
   CATALOG: 'dukaan_saathi_catalog_v2',
   SCANS: 'dukaan_saathi_scans_v2',
   REORDER: 'dukaan_saathi_reorder_v2',
+  /** CRM: leads, message templates, scheduled messages. */
+  LEADS: 'dukaan_saathi_leads_v1',
+  TEMPLATES: 'dukaan_saathi_templates_v1',
+  SCHEDULED: 'dukaan_saathi_scheduled_v1',
   /** Saathi chat history (this browser only, never synced). */
   CHATS: 'dukaan_saathi_chats_v1',
 } as const;
@@ -212,6 +217,10 @@ export interface LocalShopData {
   catalog: Product[];
   scans: ShelfScan[];
   reorder: unknown[];
+  /** CRM (optional: older uploads do not have them). */
+  leads?: Lead[];
+  templates?: MessageTemplate[];
+  scheduled?: ScheduledMessage[];
 }
 
 export function localOwner(): string | null {
@@ -253,6 +262,9 @@ export function readLocalData(): LocalShopData | null {
     catalog: safeGet(KEYS.CATALOG, []),
     scans: safeGet(KEYS.SCANS, []),
     reorder: safeGet(KEYS.REORDER, []),
+    leads: safeGet(KEYS.LEADS, []),
+    templates: safeGet<MessageTemplate[] | null>(KEYS.TEMPLATES, null) ?? defaultTemplates(profile.id),
+    scheduled: safeGet(KEYS.SCHEDULED, []),
   };
 }
 
@@ -264,4 +276,7 @@ export function writeLocalData(d: LocalShopData) {
   safeSet(KEYS.CATALOG, d.catalog);
   safeSet(KEYS.SCANS, d.scans);
   safeSet(KEYS.REORDER, d.reorder);
+  safeSet(KEYS.LEADS, d.leads ?? []);
+  safeSet(KEYS.TEMPLATES, d.templates ?? defaultTemplates(d.profile.id));
+  safeSet(KEYS.SCHEDULED, d.scheduled ?? []);
 }

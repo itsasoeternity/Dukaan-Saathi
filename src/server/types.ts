@@ -1,4 +1,4 @@
-import type { Customer, Product, ReminderLog, ReorderItem, ShelfScan, ShopProfile, Transaction } from '../types';
+import type { Customer, Lead, MessageTemplate, Product, ReminderLog, ReorderItem, ScheduledMessage, ShelfScan, ShopProfile, Transaction } from '../types';
 
 /** Everything one shop keeps. Synced from the shop's browser; only that shop reads it back. */
 export interface ShopData {
@@ -9,6 +9,20 @@ export interface ShopData {
   catalog: Product[];
   scans: ShelfScan[];
   reorder: ReorderItem[];
+  /** CRM. Optional because data uploaded before the CRM existed does not have them. */
+  leads?: Lead[];
+  templates?: MessageTemplate[];
+  scheduled?: ScheduledMessage[];
+}
+
+/** What happened to one scheduled message the server tried to send (kept apart from the shop's data). */
+export interface SendResult {
+  id: string;
+  status: 'sending' | 'sent' | 'failed';
+  sent_via: 'api';
+  sent_at?: string;
+  text?: string;
+  error?: string;
 }
 
 /** Shop-level totals. This is all the admin panel sees: no customer names, phones or per-customer balances. */

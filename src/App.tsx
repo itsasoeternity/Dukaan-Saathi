@@ -13,9 +13,11 @@ import { RemindersScreen } from './components/reminders/RemindersScreen';
 import { StockScreen } from './components/stock/StockScreen';
 import { InsightsScreen } from './components/insights/InsightsScreen';
 import { SettingsScreen } from './components/settings/SettingsScreen';
+import { CrmScreen } from './components/crm/CrmScreen';
 
 import { useLedger } from './hooks/useLedger';
 import { useStock } from './hooks/useStock';
+import { useCrm } from './hooks/useCrm';
 import { Language } from './types';
 import { useShopSync } from './hooks/useShopSync';
 import { hasUnsynced } from './lib/storage';
@@ -80,7 +82,20 @@ export default function App({ mode, shop, onLogout }: AppProps) {
     resetStockToDemo,
   } = useStock(profile.id);
 
-  const sync = useShopSync(mode === 'shop', { profile, customers, transactions, reminders, catalog, scans, reorder: reorderList });
+  const crm = useCrm(profile.id, mode);
+
+  const sync = useShopSync(mode === 'shop', {
+    profile,
+    customers,
+    transactions,
+    reminders,
+    catalog,
+    scans,
+    reorder: reorderList,
+    leads: crm.leads,
+    templates: crm.templates,
+    scheduled: crm.scheduled,
+  });
 
   const handleLogout = async () => {
     await sync.flush();
@@ -136,6 +151,7 @@ export default function App({ mode, shop, onLogout }: AppProps) {
   const handleResetAllToDemo = () => {
     resetLedgerToDemo();
     resetStockToDemo();
+    crm.resetCrmToDemo();
   };
 
   // Find last action customer name for the undo toast
@@ -169,6 +185,7 @@ export default function App({ mode, shop, onLogout }: AppProps) {
           currentTab={currentTab}
           onTabChange={setCurrentTab}
           language={profile.language}
+          leadsDue={crm.due.length}
           onQuickMicPress={() => {
             setCurrentTab('assistant');
             setExternalVoiceTrigger(true);
@@ -275,6 +292,8 @@ export default function App({ mode, shop, onLogout }: AppProps) {
               onOpenUpiQr={handleOpenUpiQr}
             />
           )}
+
+          {currentTab === 'leads' && <CrmScreen profile={profile} crm={crm} />}
 
           {currentTab === 'insights' && (
             <InsightsScreen

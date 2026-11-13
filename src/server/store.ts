@@ -7,7 +7,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ShopData, ShopRecord } from './types';
+import type { SendResult, ShopData, ShopRecord } from './types';
 
 export interface Store {
   kind: 'postgres' | 'file';
@@ -20,6 +20,14 @@ export interface Store {
   deleteShop(id: string): Promise<void>;
   getData(id: string): Promise<ShopData | null>;
   saveData(id: string, data: ShopData, patch: Partial<ShopRecord>): Promise<void>;
+  /**
+   * CRM send log. claimSend atomically records that the server is about to send a message and returns
+   * false if it was already claimed, so a message is never sent twice (two cron runs, or a phone that
+   * uploads an older copy still marked "scheduled").
+   */
+  claimSend(shopId: string, msgId: string): Promise<boolean>;
+  setSendResult(shopId: string, result: SendResult): Promise<void>;
+  listSendResults(shopId: string): Promise<SendResult[]>;
 }
 
 /* ------------------------------ JSON file ------------------------------ */
@@ -27,6 +35,7 @@ export interface Store {
 interface FileShape {
   shops: Record<string, ShopRecord>;
   data: Record<string, ShopData>;
+  sent?: Record<string, Record<string, SendResult>>;
 }
 
 class FileStore implements Store {
@@ -94,6 +103,7 @@ class FileStore implements Store {
     await this.write((s) => {
       delete s.shops[id];
       delete s.data[id];
+      delete s.sent?.[id];
     });
   }
   async getData(id: string) {
@@ -105,6 +115,27 @@ class FileStore implements Store {
       s.data[id] = data;
       s.shops[id] = { ...s.shops[id], ...patch, id };
     });
+  }
+  async claimSend(shopId: string, msgId: string) {
+    let claimed = false;
+    await this.write((s) => {
+      s.sent ??= {};
+      s.sent[shopId] ??= {};
+      if (s.sent[shopId][msgId]) return;
+      s.sent[shopId][msgId] = { id: msgId, status: 'sending', sent_via: 'api' };
+      claimed = true;
+    });
+    return claimed;
+  }
+  async setSendResult(shopId: string, result: SendResult) {
+    await this.write((s) => {
+      s.sent ??= {};
+      s.sent[shopId] ??= {};
+      s.sent[shopId][result.id] = result;
+    });
+  }
+  async listSendResults(shopId: string) {
+    return Object.values(this.load().sent?.[shopId] ?? {});
   }
 }
 
@@ -164,6 +195,16 @@ class PgStore implements Store {
           stats jsonb,
           data jsonb
         )`)
+      .then(() =>
+        this.pool.query(`
+          CREATE TABLE IF NOT EXISTS ds_crm_sent (
+            shop_id text NOT NULL REFERENCES ds_shops(id) ON DELETE CASCADE,
+            msg_id text NOT NULL,
+            result jsonb NOT NULL,
+            updated_at timestamptz NOT NULL DEFAULT now(),
+            PRIMARY KEY (shop_id, msg_id)
+          )`),
+      )
       .then(() => undefined);
   }
 
@@ -213,6 +254,25 @@ class PgStore implements Store {
   async saveData(id: string, data: ShopData, patch: Partial<ShopRecord>) {
     const { sets, values } = this.patchSql(patch, 3);
     await this.q(`UPDATE ds_shops SET data = $2${sets.length ? ', ' + sets.join(', ') : ''} WHERE id = $1`, [id, JSON.stringify(data), ...values]);
+  }
+  async claimSend(shopId: string, msgId: string) {
+    const rows = await this.q(
+      `INSERT INTO ds_crm_sent (shop_id, msg_id, result) VALUES ($1, $2, $3)
+       ON CONFLICT (shop_id, msg_id) DO NOTHING RETURNING msg_id`,
+      [shopId, msgId, JSON.stringify({ id: msgId, status: 'sending', sent_via: 'api' })],
+    );
+    return rows.length === 1;
+  }
+  async setSendResult(shopId: string, result: SendResult) {
+    await this.q(
+      `INSERT INTO ds_crm_sent (shop_id, msg_id, result) VALUES ($1, $2, $3)
+       ON CONFLICT (shop_id, msg_id) DO UPDATE SET result = EXCLUDED.result, updated_at = now()`,
+      [shopId, result.id, JSON.stringify(result)],
+    );
+  }
+  async listSendResults(shopId: string) {
+    const rows = await this.q('SELECT result FROM ds_crm_sent WHERE shop_id = $1', [shopId]);
+    return rows.map((r) => r.result as SendResult);
   }
 }
 

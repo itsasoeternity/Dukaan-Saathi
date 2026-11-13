@@ -36,7 +36,7 @@ recognition transcript is used when the browser has one.
 | --- | --- |
 | `npm run dev` | Express server + Vite dev server |
 | `npm run build` then `npm start` | Production build served by the same server |
-| `npm test` | 70 tests (parser, matching, ledger maths, reminders, receipts, credit limit, reminder day, statement links, shelf rules, migration, login, admin privacy, vendor isolation) |
+| `npm test` | 81 tests (CRM tags, templates, scheduling and one-time sending, parser, matching, ledger maths, reminders, receipts, credit limit, reminder day, statement links, shelf rules, migration, login, admin privacy, vendor isolation) |
 | `npm run eval` | Parser accuracy on the 50 utterances in `eval/utterances.json` |
 | `npm run eval:voice -- <folder>` | Accuracy on real recordings (see `eval/README.md`) |
 | `npm run lint` | TypeScript check |
@@ -99,6 +99,29 @@ per voice entry and per shelf photo, and a cost estimate if you set the price en
 Logic lives in `src/lib/customerInsights.ts`, `src/lib/statement.ts` and `src/lib/reminders.ts`, with tests in `tests/features.test.ts` and `tests/server.test.ts`.
 
 Limits: offline sync is "last save wins" for the whole khata. If two phones edit the same shop offline at the same time, the later upload replaces the earlier one. One phone per shop is fine.
+
+## Leads CRM (tags, templates, scheduled messages)
+
+Sidebar / bottom bar → **Leads**. For finding new customers and following up with them.
+
+| Step | What the owner does |
+| --- | --- |
+| Add a lead | "Naya lead": name, WhatsApp number, source, note, tags. A number is saved only with the consent tick ("is vyakti ne message lene ke liye haan kaha hai"). |
+| Tag leads | Type tags in the form (Enter or comma), tap "+ tag" on any lead, or select many leads and use "Tag lagayein / Tag hatayein". Tap tags at the top to filter (several tags = leads with all of them). |
+| Templates | "Templates" tab: four starter templates, add or edit your own. Placeholders `{name}`, `{shop}`, `{owner}`, `{upi}` are filled per lead, with a live preview. |
+| Schedule | Pick one lead ("Schedule") or select many → "Template schedule karein" → choose the template → choose the time (quick picks like "Kal subah 10 baje" or any date and time). One message is created per lead; leads without number/consent are skipped and shown. |
+| Sending | **Default (no setup):** at the chosen time the message moves to "Abhi bhejein" (badge on the Leads tab, optional browser notification); one tap opens WhatsApp with the text filled in and the owner taps send. **Automatic:** set `WHATSAPP_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` (WhatsApp Cloud API) and the server sends at the time by itself. |
+| Track | "Scheduled" tab: due now, upcoming (change time or cancel), history (sent / failed / cancelled). A lead becomes "Baat hui" after the first message goes out; the status can be changed any time. |
+
+Automatic sending, details:
+
+- `npm start` / `npm run dev`: the server checks every minute by itself.
+- Vercel: call `GET /api/cron/send-due` every minute with `Authorization: Bearer $CRON_SECRET` (Vercel Cron on a Pro plan, or any external cron service; Hobby plans only allow daily cron jobs).
+- WhatsApp only allows free text to people who messaged the shop in the last 24 hours. For everyone else create a template in Meta Business Manager, get it approved, and enter its name and language in the app's template ("WhatsApp approved template"); `{{1}}` in it is filled with the lead's first name.
+- Each message is recorded in a separate send log before it is sent, so it is never sent twice (two cron runs, or a phone uploading an older copy). Messages more than 24 hours late are not sent automatically; the owner can send them by hand.
+- Logs contain counts only, never names, numbers or message text.
+
+Code: `src/lib/crm.ts` (logic), `src/hooks/useCrm.ts`, `src/components/crm/CrmScreen.tsx`, `src/server/crm.ts` (status, cron, Cloud API), tests in `tests/crm.test.ts`.
 
 ## Before making claims (pitch checklist)
 

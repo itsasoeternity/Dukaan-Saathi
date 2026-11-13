@@ -8,11 +8,12 @@ import {
   Settings,
   BellRing,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { Language } from '../../types';
 import { translations } from '../../utils/translations';
 
-export type NavTab = 'home' | 'khata' | 'assistant' | 'stock' | 'reminders' | 'insights' | 'settings';
+export type NavTab = 'home' | 'khata' | 'assistant' | 'stock' | 'reminders' | 'leads' | 'insights' | 'settings';
 
 interface NavigationProps {
   currentTab: NavTab;
@@ -20,6 +21,8 @@ interface NavigationProps {
   language: Language;
   onQuickMicPress: () => void;
   isRecording?: boolean;
+  /** Scheduled CRM messages whose time has come (badge on the Leads tab). */
+  leadsDue?: number;
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -28,6 +31,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   language,
   onQuickMicPress,
   isRecording = false,
+  leadsDue = 0,
 }) => {
   const t = translations[language].tabs;
 
@@ -36,6 +40,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'khata' as NavTab, label: t.khata, icon: BookOpen },
     { id: 'stock' as NavTab, label: t.stock, icon: Package },
     { id: 'reminders' as NavTab, label: 'Reminders', icon: BellRing },
+    { id: 'leads' as NavTab, label: 'Leads CRM', icon: Users },
     { id: 'insights' as NavTab, label: t.insights, icon: TrendingUp },
     { id: 'settings' as NavTab, label: t.settings, icon: Settings },
   ];
@@ -89,6 +94,9 @@ export const Navigation: React.FC<NavigationProps> = ({
               >
                 <Icon className={`w-5 h-5 ${active ? 'text-[#1F7A5C]' : 'text-[#5F7A6E]'}`} />
                 <span>{item.label}</span>
+                {item.id === 'leads' && leadsDue > 0 && (
+                  <span className="ml-auto text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#F5A623] text-[#0B3D2E]">{leadsDue}</span>
+                )}
               </button>
             );
           })}
@@ -175,6 +183,22 @@ export const Navigation: React.FC<NavigationProps> = ({
           >
             <BellRing className={`w-5 h-5 ${currentTab === 'reminders' ? 'text-[#1F7A5C]' : ''}`} />
             <span className="text-[10px] mt-0.5">Reminder</span>
+          </button>
+
+          {/* Leads CRM */}
+          <button
+            onClick={() => onTabChange('leads')}
+            className={`relative flex-1 flex flex-col items-center justify-center py-1 transition-colors ${
+              currentTab === 'leads' ? 'text-[#0B3D2E] font-bold' : 'text-[#5F7A6E]'
+            }`}
+          >
+            <Users className={`w-5 h-5 ${currentTab === 'leads' ? 'text-[#1F7A5C]' : ''}`} />
+            <span className="text-[10px] mt-0.5">Leads</span>
+            {leadsDue > 0 && (
+              <span className="absolute top-0 right-2 min-w-4 h-4 px-1 rounded-full bg-[#F5A623] text-[#0B3D2E] text-[9px] font-black flex items-center justify-center">
+                {leadsDue}
+              </span>
+            )}
           </button>
         </div>
       </nav>

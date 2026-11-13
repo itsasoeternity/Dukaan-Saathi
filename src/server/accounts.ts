@@ -25,6 +25,7 @@ import { computeShopStats, validateShopData } from './stats.js';
 import { parseStatementToken } from '../lib/statement.js';
 import { computeBalances } from '../lib/ledger.js';
 import { getStore } from './store.js';
+import { applySendResults } from './crm.js';
 import { publicShop, ShopData, ShopPlan, ShopRecord, ShopStats } from './types.js';
 
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
@@ -148,6 +149,8 @@ export function registerAccountRoutes(app: Express) {
     if (data) {
       // Admin may have changed the shop name / owner / UPI: the account record wins.
       data.profile = { ...data.profile, id: shop.id, name: shop.name, owner: shop.owner, upi_id: shop.upi_id || data.profile.upi_id };
+      // Messages the server already sent through WhatsApp show as sent.
+      data.scheduled = applySendResults(data.scheduled, await store.listSendResults(shop.id));
     }
     return res.json({ shop: publicShop(shop), data, updated_at: shop.last_sync_at });
   });
@@ -162,7 +165,7 @@ export function registerAccountRoutes(app: Express) {
     const data = req.body.data as ShopData;
     // Every record belongs to this shop, whatever the client sent.
     data.profile.id = shop.id;
-    for (const list of [data.customers, data.transactions, data.reminders, data.catalog, data.scans] as Array<Array<{ shop_id: string }>>) {
+    for (const list of [data.customers, data.transactions, data.reminders, data.catalog, data.scans, data.leads ?? [], data.templates ?? [], data.scheduled ?? []] as Array<Array<{ shop_id: string }>>) {
       for (const item of list) item.shop_id = shop.id;
     }
     const now = new Date().toISOString();

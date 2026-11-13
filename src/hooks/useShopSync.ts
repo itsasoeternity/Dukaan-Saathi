@@ -62,7 +62,7 @@ export function useShopSync(enabled: boolean, data: LocalShopData) {
     setStatus(navigator.onLine === false ? 'offline' : 'pending');
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(save, 1200);
-  }, [enabled, save, data.profile, data.customers, data.transactions, data.reminders, data.catalog, data.scans, data.reorder]);
+  }, [enabled, save, data.profile, data.customers, data.transactions, data.reminders, data.catalog, data.scans, data.reorder, data.leads, data.templates, data.scheduled]);
 
   // While offline or failing, retry every 30 seconds as well.
   useEffect(() => {

@@ -41,6 +41,8 @@ function freshShopData(shop: PublicShop) {
     catalog: initialProducts.map(({ status_updated_at: _s, ...p }) => ({ ...p, shop_id: shop.id, stock_status: 'unknown' as const })),
     scans: [],
     reorder: [],
+    leads: [],
+    scheduled: [],
   };
 }
 

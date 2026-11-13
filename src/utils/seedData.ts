@@ -1,4 +1,4 @@
-import { Customer, Product, ShelfScan, ShopProfile, Transaction } from '../types/index.js';
+import { Customer, Lead, Product, ShelfScan, ShopProfile, Transaction } from '../types/index.js';
 
 export const DEMO_SHOP_ID = 'shop-demo';
 
@@ -175,4 +175,13 @@ export const initialPastScans: ShelfScan[] = [
       { name: 'Fortune Sunlite Sunflower Oil 1L', matched_sku: 'fortune-oil-1l', status: 'low', confidence: 0.92, note: 'Stock critical' },
     ],
   },
+];
+
+/* ------------------------------ CRM demo data ------------------------------ */
+
+export const initialLeads: Lead[] = [
+  { id: 'lead-1', shop_id: DEMO_SHOP_ID, name: 'Neha Kapoor', phone: '9811000111', consent_given_at: '2026-11-01T10:00:00Z', tags: ['naya society', 'home delivery'], status: 'new', source: 'Walk-in', note: 'Tower B, Green Park society mein naya shift hua', created_at: '2026-11-01T10:00:00Z' },
+  { id: 'lead-2', shop_id: DEMO_SHOP_ID, name: 'Vikas Jain', phone: '9899000222', consent_given_at: '2026-11-03T12:00:00Z', tags: ['bulk', 'diwali'], status: 'interested', source: 'Phone call', note: 'Office pantry ke liye monthly saman', created_at: '2026-11-03T12:00:00Z' },
+  { id: 'lead-3', shop_id: DEMO_SHOP_ID, name: 'Farida Khan', phone: '9711000333', consent_given_at: '2026-11-05T09:30:00Z', tags: ['home delivery', 'vip'], status: 'contacted', source: 'Pamphlet', note: '', created_at: '2026-11-05T09:30:00Z' },
+  { id: 'lead-4', shop_id: DEMO_SHOP_ID, name: 'Rohit (Gym wale)', phone: '', consent_given_at: null, tags: ['bulk'], status: 'new', source: 'Referral', note: 'Number abhi nahi diya', created_at: '2026-11-08T17:00:00Z' },
 ];

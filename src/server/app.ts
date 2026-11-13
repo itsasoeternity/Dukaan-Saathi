@@ -19,6 +19,7 @@ import { confirmationText, ReplyLanguage } from '../lib/replies.js';
 import { sanitizeDetections, stripUnitCounts } from '../lib/shelf.js';
 import { adminConfigured, requireLogin, requireRole } from './auth.js';
 import { registerAccountRoutes } from './accounts.js';
+import { registerCrmRoutes } from './crm.js';
 import { getStore } from './store.js';
 
 dotenv.config();
@@ -112,6 +113,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 });
 
 registerAccountRoutes(app);
+registerCrmRoutes(app);
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
